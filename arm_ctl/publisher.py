@@ -1,7 +1,6 @@
 import rclpy
 import argparse
 import numpy as np
-from motorconf import positions
 from rclpy.node import Node
 import dynamixel_sdk
 import std_msgs.msg as msg
@@ -36,11 +35,11 @@ class ArmModelPublisher(Node):
         orientation_linkage_a = self.packet_handler.read4ByteTxRx(self.port_handler, id_linkage_a, present_position)[0]
         orientation_linkage_b = self.packet_handler.read4ByteTxRx(self.port_handler, id_linkage_b, present_position)[0]
         payload = msg.UInt32()
-        payload.data = orientation_base - positions.base
+        payload.data = orientation_base - positions['base']
         self.publish_orientation_base.publish(payload)
-        payload.data = orientation_linkage_a - positions.a
+        payload.data = orientation_linkage_a - positions['a']
         self.publish_orientation_linkage_a.publish(payload)
-        payload.data = orientation_linkage_b - positions.b
+        payload.data = orientation_linkage_b - positions['b']
         self.publish_orientation_linkage_b.publish(payload)
 
 def main(args=None):

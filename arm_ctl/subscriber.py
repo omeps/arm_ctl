@@ -1,6 +1,5 @@
 import rclpy
 import numpy as np
-from motorconf import positions
 def overflow_add(a,b):
 
     return int(np.array(a,dtype=np.int32) + np.array(b,dtype=np.int32))
@@ -50,7 +49,7 @@ class ArmSubscriber(Node):
             self.port_handler,
             id_base,
             goal_position,
-            payload.data + positions.base
+            payload.data + positions['base']
         )
     def move_linkage_a(self, payload):
         goal_position = 116
@@ -58,7 +57,7 @@ class ArmSubscriber(Node):
             self.port_handler,
             id_linkage_a,
             goal_position,
-            payload.data + positions.a
+            payload.data + positions['a']
         )
     def move_linkage_b(self, payload):
         goal_position = 116
@@ -66,7 +65,7 @@ class ArmSubscriber(Node):
             self.port_handler,
             id_linkage_b,
             goal_position,
-            payload.data + positions.b
+            payload.data + positions['b']
         )
 
 def main(args=None):
