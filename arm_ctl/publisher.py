@@ -32,8 +32,11 @@ class ArmModelPublisher(Node):
         global id_base,id_linkage_a, id_linkage_b
         present_position = 132
         orientation_base = self.packet_handler.read4ByteTxRx(self.port_handler, id_base, present_position)[0]
+        if (orientation_base > 2 ** 31): orientation_base -= 2 ** 32
         orientation_linkage_a = self.packet_handler.read4ByteTxRx(self.port_handler, id_linkage_a, present_position)[0]
+        if (orientation_linkage_a > 2 ** 31): orientation_linkage_a -= 2 ** 32
         orientation_linkage_b = self.packet_handler.read4ByteTxRx(self.port_handler, id_linkage_b, present_position)[0]
+        if (orientation_linkage_b > 2 ** 31): orientation_linkage_b -= 2 ** 32
         payload = msg.UInt32()
         payload.data = orientation_base - positions['base']
         self.publish_orientation_base.publish(payload)

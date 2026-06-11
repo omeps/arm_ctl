@@ -18,4 +18,6 @@ for (link,mid) in [('base', 5), ('a', 6), ('b', 7)]:
     print(f'determining link {link} ... ')
     positions[link] = get_position(mid)
 with open('arm_ctl/publisher.py','a') as conf:
-    conf.write(f"positions = {positions}");
+    conf.write(f"positions = {positions}\n");
+with open('arm_ctl/subscriber.py','a') as conf:
+    conf.write(f"positions = {positions}\n");
