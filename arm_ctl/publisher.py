@@ -13,11 +13,11 @@ class ArmModelPublisher(Node):
     def __init__(self, dir="arm_ctl/", timer_period=0.03, device_name='/dev/ttyUSB0'):
         super().__init__('arm_model_publisher',parameter_overrides=[])
         self.publish_orientation_base = self.create_publisher(
-            msg.UInt32, dir + "base", 1)
+            msg.Int32, dir + "base", 1)
         self.publish_orientation_linkage_a = self.create_publisher(
-            msg.UInt32, dir + "linkage_a", 1)
+            msg.Int32, dir + "linkage_a", 1)
         self.publish_orientation_linkage_b = self.create_publisher(
-            msg.UInt32, dir + "linkage_b", 1)
+            msg.Int32, dir + "linkage_b", 1)
         self.timer = self.create_timer(timer_period, self.publish_motor_data)
 
         self.port_handler = dynamixel_sdk.PortHandler(device_name)
@@ -37,7 +37,7 @@ class ArmModelPublisher(Node):
         if (orientation_linkage_a > 2 ** 31): orientation_linkage_a -= 2 ** 32
         orientation_linkage_b = self.packet_handler.read4ByteTxRx(self.port_handler, id_linkage_b, present_position)[0]
         if (orientation_linkage_b > 2 ** 31): orientation_linkage_b -= 2 ** 32
-        payload = msg.UInt32()
+        payload = msg.Int32()
         payload.data = orientation_base - positions['base']
         self.publish_orientation_base.publish(payload)
         payload.data = orientation_linkage_a - positions['a']
