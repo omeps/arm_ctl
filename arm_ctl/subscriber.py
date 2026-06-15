@@ -91,9 +91,8 @@ class ArmSubscriber(Node):
         toggle_torque = 64
         for i in [id_base, id_linkage_a, id_linkage_b]:
             self.packet_handler.reboot(self.port_handler, i)
-        time.sleep(0.05)
         for id in [id_base, id_linkage_a, id_linkage_b]:
-            self.packet_handler.write1ByteTxRx(self.port_handler, id, toggle_torque, 0) # turn motors off to configure EEPROM
+            while self.packet_handler.write1ByteTxRx(self.port_handler, id, toggle_torque, 0)[0] != 0: time.sleep(0.01) # turn motors off to configure EEPROM
             self.packet_handler.write4ByteTxRx(self.port_handler, id, 112, 100) # turn motors off to configure EEPROM
             self.packet_handler.write1ByteTxRx(self.port_handler, id, toggle_torque, 1) # turn motors on
 def main(args=None):
