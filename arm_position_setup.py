@@ -17,7 +17,47 @@ positions = {}
 for (link,mid) in [('base', 5), ('a', 6), ('b', 7)]:
     print(f'determining link {link} ... ')
     positions[link] = get_position(mid)
-with open('arm_ctl/publisher.py','a') as conf:
-    conf.write(f"positions = {positions}\n");
-with open('arm_ctl/subscriber.py','a') as conf:
-    conf.write(f"positions = {positions}\n");
+with open('launch/subscriber.py','w') as conf:
+    conf.write(f'''
+from launch import LaunchDescription
+from launch_ros.actions import Node
+
+
+def generate_launch_description():
+    return LaunchDescription([
+        Node(
+            package='arm_ctl',
+            executable='arm',
+            name='subscriber',
+            output='screen',
+            emulate_tty=True,
+            parameters=[
+                {{'a': {positions['a']}}},
+                {{'b': {positions['b']}}},
+                {{'base': {positions['base']}}},
+            ]
+        )
+    ])
+''')
+with open('launch/publisher.py','w') as conf:
+    conf.write(f'''
+from launch import LaunchDescription
+from launch_ros.actions import Node
+
+
+def generate_launch_description():
+    return LaunchDescription([
+        Node(
+            package='arm_ctl',
+            executable='arm_model',
+            name='publisher',
+            output='screen',
+            emulate_tty=True,
+            parameters=[
+                {{'a': {positions['a']}}},
+                {{'b': {positions['b']}}},
+                {{'base': {positions['base']}}},
+            ]
+        )
+    ])
+''')

@@ -16,6 +16,9 @@ class ArmSubscriber(Node):
     # MAKE SURE `dir' ends with a / to keep topics in 1 directory
     def __init__(self, dir="arm_ctl/", device_name='/dev/ttyUSB0'):
         super().__init__('arm_subscriber',parameter_overrides=[])
+        self.declare_parameter('a', 0)
+        self.declare_parameter('b', 0)
+        self.declare_parameter('base', 0)
         self.port_handler = dynamixel_sdk.PortHandler(device_name)
         self.packet_handler = dynamixel_sdk.PacketHandler(2.0)
         self.port_handler.openPort() or quit()
@@ -59,7 +62,7 @@ class ArmSubscriber(Node):
             self.port_handler,
             id_base,
             goal_position,
-            payload.data + positions['base']
+            payload.data + self.get_parameter('base').get_parameter_value().integer_value
         )[1]
         payload = msg.Bool()
         payload.data = err != 0
@@ -70,7 +73,7 @@ class ArmSubscriber(Node):
             self.port_handler,
             id_linkage_a,
             goal_position,
-            payload.data + positions['a']
+            payload.data + self.get_parameter('a').get_parameter_value().integer_value
         )[1]
         payload = msg.Bool()
         payload.data = err != 0
@@ -82,7 +85,7 @@ class ArmSubscriber(Node):
             self.port_handler,
             id_linkage_b,
             goal_position,
-            payload.data + positions['b']
+            payload.data + self.get_parameter('b').get_parameter_value().integer_value
         )[1]
         payload = msg.Bool()
         payload.data = err != 0
@@ -97,14 +100,7 @@ class ArmSubscriber(Node):
             self.packet_handler.write1ByteTxRx(self.port_handler, id, toggle_torque, 1) # turn motors on
 def main(args=None):
     rclpy.init(args=args)
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--dir", help="ros topic directory", default="arm_ctl")
-    parser.add_argument("--period", help="how long to publish values (in seconds)", default="0.03")
-    parser.add_argument("--device_name", help="device file location", default="/dev/ttyUSB0")
-    args = parser.parse_args()
-    if args.dir[-1] != '/': args.dir += '/'
-    subscriber = ArmSubscriber(dir=args.dir, device_name=args.device_name)
+    subscriber = ArmSubscriber()
     rclpy.spin(subscriber)
     subscriber.destroy_node()
     rclpy.shutdown()
