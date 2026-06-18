@@ -95,20 +95,17 @@ class ArmSubscriber(Node):
         self.publish_err_base.publish(message)
     def move_linkage_a(self, payload):
         message = msg.Bool()
-        message.data = self.linkage_a.set_position(payload.data + self.get_parameter('linkage_a').get_parameter_value().integer_value)
+        message.data = self.linkage_a.set_position(payload.data + self.get_parameter('a').get_parameter_value().integer_value)
         self.publish_err_linkage_a.publish(message)
     def move_linkage_b(self, payload):
         message = msg.Bool()
-        message.data = self.linkage_b.set_position(payload.data + self.get_parameter('linkage_b').get_parameter_value().integer_value)
+        message.data = self.linkage_b.set_position(payload.data + self.get_parameter('b').get_parameter_value().integer_value)
         self.publish_err_linkage_b.publish(message)
     def reset(self, payload):
         toggle_torque = 64
-        for i in [id_base, id_linkage_a, id_linkage_b]:
-            self.packet_handler.reboot(self.port_handler, i)
-        for id in [id_base, id_linkage_a, id_linkage_b]:
-            while self.packet_handler.write1ByteTxRx(self.port_handler, id, toggle_torque, 0)[0] != 0: time.sleep(0.01) # turn motors off to configure EEPROM
-            self.packet_handler.write4ByteTxRx(self.port_handler, id, 112, 100) # turn motors off to configure EEPROM
-            self.packet_handler.write1ByteTxRx(self.port_handler, id, toggle_torque, 1) # turn motors on
+        self.base.reboot()
+        self.linkage_a.reboot()
+        self.linkage_b.reboot()
     def drive_direction(self, direction_msg):
         direction = direction_msg.data
 
