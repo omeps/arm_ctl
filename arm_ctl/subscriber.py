@@ -1,16 +1,27 @@
 import rclpy
+from rclpy.node import Node
+
+from std_msgs.msg import String
+from std_msgs.msg import Int8
 import numpy as np
 import time
 def overflow_add(a,b):
 
     return int(np.array(a,dtype=np.int32) + np.array(b,dtype=np.int32))
 import argparse
-from rclpy.node import Node
 import dynamixel_sdk
 import std_msgs.msg as msg
 id_base = 5
 id_linkage_a = 6 
 id_linkage_b = 7
+FRONT_LEFT_ADDR = 0
+BACK_LEFT_ADDR = 2
+FRONT_RIGHT_ADDR = 1
+BACK_RIGHT_ADDR = 3
+
+BROAD_PERCENT = .2
+
+TIGHT_PERCENT = .6
 
 class ArmSubscriber(Node):
     # MAKE SURE `dir' ends with a / to keep topics in 1 directory
@@ -19,15 +30,10 @@ class ArmSubscriber(Node):
         self.declare_parameter('a', 0)
         self.declare_parameter('b', 0)
         self.declare_parameter('base', 0)
-        self.port_handler = dynamixel_sdk.PortHandler(device_name)
-        self.packet_handler = dynamixel_sdk.PacketHandler(2.0)
-        self.port_handler.openPort() or quit()
-        self.port_handler.setBaudRate(1000000)
-        toggle_torque = 64
-        for id in [id_base, id_linkage_a, id_linkage_b]:
-            self.packet_handler.write1ByteTxRx(self.port_handler, id, toggle_torque, 0) # turn motors off to configure EEPROM
-            self.packet_handler.write4ByteTxRx(self.port_handler, id, 112, 100) # turn motors off to configure EEPROM
-            self.packet_handler.write1ByteTxRx(self.port_handler, id, toggle_torque, 1) # turn motors on
+        self.dyna_controller = DynamixelController("/dev/serial/by-id/usb-FTDI_USB__-__Serial_Converter_FT3WHPY9-if00-port0")
+        self.base = Dynamixel("base", id_base, self.dyna_controller, "arm")
+        self.linkage_a = Dynamixel("linkage_a", id_linkage_a, self.dyna_controller, "arm")
+        self.linkage_b = Dynamixel("linkage_b", id_linkage_b, self.dyna_controller, "arm")
         self.subscription_base = self.create_subscription(
             msg.Int32,
             dir + 'base',
@@ -56,40 +62,45 @@ class ArmSubscriber(Node):
             1
         )
 
-    def move_base(self, payload):
-        goal_position = 116
-        err = self.packet_handler.write4ByteTxRx(
-            self.port_handler,
-            id_base,
-            goal_position,
-            payload.data + self.get_parameter('base').get_parameter_value().integer_value
-        )[1]
-        payload = msg.Bool()
-        payload.data = err != 0
-        self.publish_err_base.publish(payload)
-    def move_linkage_a(self, payload):
-        goal_position = 116
-        err = self.packet_handler.write4ByteTxRx(
-            self.port_handler,
-            id_linkage_a,
-            goal_position,
-            payload.data + self.get_parameter('a').get_parameter_value().integer_value
-        )[1]
-        payload = msg.Bool()
-        payload.data = err != 0
-        self.publish_err_linkage_a.publish(payload)
+        self.front_left = Dynamixel("front_left", FRONT_LEFT_ADDR, self.dyna_controller, "wheel")
+        self.back_left = Dynamixel("back_left", BACK_LEFT_ADDR, self.dyna_controller, "wheel")
+        self.front_right = Dynamixel("front_right", FRONT_RIGHT_ADDR, self.dyna_controller, "wheel")
+        self.back_right = Dynamixel("back_right", BACK_RIGHT_ADDR, self.dyna_controller, "wheel")
 
+        self.speed_mult = 0.5
+
+        self.motors_arr = [self.front_left, self.back_left, self.front_right, self.back_right]
+
+        self.base_motion_sub = self.create_subscription(
+            String,
+            '/motor_states/drive',
+            self.drive_direction,
+            1)
+        self.base_motion_sub
+
+        self.speed_sub = self.create_subscription(
+            Int8,
+            '/speed',
+            self.get_speed,
+            1)
+        self.speed_sub
+
+        self.direction = "still"
+
+        # timer_period = 1/30
+        # self.timer = self.create_timer(timer_period, self.send_motor_cmds)
+    def move_base(self, payload):
+        message = msg.Bool()
+        message.data = self.base.set_position(payload.data + self.get_parameter('base').get_parameter_value().integer_value)
+        self.publish_err_base.publish(message)
+    def move_linkage_a(self, payload):
+        message = msg.Bool()
+        message.data = self.linkage_a.set_position(payload.data + self.get_parameter('linkage_a').get_parameter_value().integer_value)
+        self.publish_err_linkage_a.publish(message)
     def move_linkage_b(self, payload):
-        goal_position = 116
-        err = self.packet_handler.write4ByteTxRx(
-            self.port_handler,
-            id_linkage_b,
-            goal_position,
-            payload.data + self.get_parameter('b').get_parameter_value().integer_value
-        )[1]
-        payload = msg.Bool()
-        payload.data = err != 0
-        self.publish_err_linkage_b.publish(payload)
+        message = msg.Bool()
+        message.data = self.linkage_b.set_position(payload.data + self.get_parameter('linkage_b').get_parameter_value().integer_value)
+        self.publish_err_linkage_b.publish(message)
     def reset(self, payload):
         toggle_torque = 64
         for i in [id_base, id_linkage_a, id_linkage_b]:
@@ -98,6 +109,83 @@ class ArmSubscriber(Node):
             while self.packet_handler.write1ByteTxRx(self.port_handler, id, toggle_torque, 0)[0] != 0: time.sleep(0.01) # turn motors off to configure EEPROM
             self.packet_handler.write4ByteTxRx(self.port_handler, id, 112, 100) # turn motors off to configure EEPROM
             self.packet_handler.write1ByteTxRx(self.port_handler, id, toggle_torque, 1) # turn motors on
+    def drive_direction(self, direction_msg):
+        direction = direction_msg.data
+
+        if self.direction != direction:
+            self.direction = direction
+        
+            if direction == "forward":
+                self.front_left.direction_mult = 1.0
+                self.back_left.direction_mult = 1.0
+                self.front_right.direction_mult = -1.0
+                self.back_right.direction_mult = -1.0
+            elif direction == "reverse":
+                self.front_left.direction_mult = -1.0
+                self.back_left.direction_mult = -1.0
+                self.front_right.direction_mult = 1.0
+                self.back_right.direction_mult = 1.0
+            elif direction == "forward_left":
+                self.front_left.direction_mult = 1.0*BROAD_PERCENT
+                self.back_left.direction_mult = 1.0*BROAD_PERCENT
+                # self.front_left.direction_mult = 0
+                # self.back_left.direction_mult = 0
+                self.front_right.direction_mult = -1.0
+                self.back_right.direction_mult = -1.0
+            elif direction == "forward_right":
+                self.front_left.direction_mult = 1.0
+                self.back_left.direction_mult = 1.0
+                self.front_right.direction_mult = -1.0*BROAD_PERCENT
+                self.back_right.direction_mult = -1.0*BROAD_PERCENT
+                # self.front_right.direction_mult = 0
+                # self.back_right.direction_mult = 0
+            elif direction == "reverse_left":
+                self.front_left.direction_mult = -1.0*BROAD_PERCENT
+                self.back_left.direction_mult = -1.0*BROAD_PERCENT
+                # self.front_left.direction_mult = 0
+                # self.back_left.direction_mult = 0
+                self.front_right.direction_mult = 1.0
+                self.back_right.direction_mult = 1.0
+            elif direction == "reverse_right":
+                self.front_left.direction_mult = -1.0
+                self.back_left.direction_mult = -1.0
+                # self.front_right.direction_mult = 0
+                # self.back_right.direction_mult = 0
+                self.front_right.direction_mult = 1.0*BROAD_PERCENT
+                self.back_right.direction_mult = 1.0*BROAD_PERCENT
+            elif direction == "left":
+                self.front_left.direction_mult = -TIGHT_PERCENT
+                self.back_left.direction_mult = -TIGHT_PERCENT
+                self.front_right.direction_mult = -TIGHT_PERCENT
+                self.back_right.direction_mult = -TIGHT_PERCENT
+            elif direction == "right":
+                self.front_left.direction_mult = TIGHT_PERCENT
+                self.back_left.direction_mult = TIGHT_PERCENT
+                self.front_right.direction_mult = TIGHT_PERCENT
+                self.back_right.direction_mult = TIGHT_PERCENT
+            else:
+                # direction == "still"
+                self.front_left.direction_mult = 0.0
+                self.back_left.direction_mult = 0.0
+                self.front_right.direction_mult = 0.0
+                self.back_right.direction_mult = 0.0
+            
+            self.send_motor_cmds()
+    
+    def send_motor_cmds(self):
+        for motor in self.motors_arr:
+            # send motor commands
+            speed = motor.direction_mult*self.speed_mult
+            print(f"Set {motor.name} speed: {speed}")
+            motor.set_speed(speed)
+
+    def get_speed(self, speed_msg):
+        speed = self.speed_mult*100
+        if speed != speed_msg.data:
+            self.speed_mult = speed_msg.data/100
+            self.send_motor_cmds()
+
+
 def main(args=None):
     rclpy.init(args=args)
     subscriber = ArmSubscriber()
@@ -108,3 +196,46 @@ def main(args=None):
 
 if __name__ == '__main__':
     main()
+class DynamixelController:
+    def __init__(self,dev: str):
+        self.port_handler = dynamixel_sdk.PortHandler(dev)
+        self.packet_handler = dynamixel_sdk.PacketHandler(2.0)
+        self.port_handler.openPort()
+        self.port_handler.setBaudRate(1000000)
+    def toggle_torque(self, addr: int, value: int):
+        return self.packet_handler.write1ByteTxRx(self.port_handler, addr, 64, value)[0]
+    def set_mode_run(self, addr: int):
+        self.packet_handler.write1ByteTxRx(self.port_handler, addr, 11, 1)
+    def set_mode_position(self, addr: int):
+        self.packet_handler.write1ByteTxRx(self.port_handler, addr, 11, 4)
+    # returns true on error
+    def set_speed(self, addr: int, speed: float):
+        return self.packet_handler.write4ByteTxRx(self.port_handler, addr, 104, int(speed * 265))[1] != 0
+    # returns true on error
+    def set_position(self, addr: int, goal_position: int):
+        return self.packet_handler.write4ByteTxRx(self.port_handler, addr, 116, goal_position)[1] != 0
+    def reboot(self,addr: int):
+        self.packet_handler.reboot(self.port_handler, addr)
+        while self.toggle_torque(addr, 1) != 0: time.sleep(0.01)
+class Dynamixel:
+    def __init__(self, name: str, motor_addr: int, controller: DynamixelController, ty: str):
+        self.controller = controller
+        self.name = name
+        self.motor_addr = motor_addr
+        self.controller.toggle_torque(self.motor_addr, 0)
+        if ty == "wheel":
+            self.controller.set_mode_run(self.motor_addr)
+        elif ty == "arm":
+            self.controller.set_mode_position(self.motor_addr)
+        else:
+            raise ValueError("ty must be \"arm\" or \"wheel\"")
+        self.controller.toggle_torque(self.motor_addr, 1)
+        self.direction_mult = 0.0
+    # returns true on error
+    def set_speed(self, speed: float):
+        return self.controller.set_speed(self.motor_addr, speed)
+    # returns true on error
+    def set_position(self, position: int):
+        return self.controller.set_position(self.motor_addr, position)
+    def reboot(self):
+        self.controller.reboot(self.motor_addr)
