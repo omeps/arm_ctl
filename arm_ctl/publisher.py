@@ -1,6 +1,7 @@
 import rclpy
 import argparse
 import numpy as np
+import json
 from rclpy.node import Node
 import dynamixel_sdk
 import std_msgs.msg as msg
@@ -21,6 +22,12 @@ class ArmModelPublisher(Node):
             msg.Int32, dir + "linkage_a", 1)
         self.publish_orientation_linkage_b = self.create_publisher(
             msg.Int32, dir + "linkage_b", 1)
+        self.subscription_reposition = self.create_subscription(
+                msg.String,
+                dir + 'reposition',
+                self.reposition,
+                1,
+        )
         self.timer = self.create_timer(timer_period, self.publish_motor_data)
 
         self.port_handler = dynamixel_sdk.PortHandler(device_name)
@@ -48,6 +55,34 @@ class ArmModelPublisher(Node):
         self.publish_orientation_linkage_a.publish(payload)
         payload.data = orientation_linkage_b - self.get_parameter('b').get_parameter_value().integer_value
         self.publish_orientation_linkage_b.publish(payload)
+    def reposition(self, payload):
+        data = json.loads(payload.data)
+        toggle_torque = 64
+        for id in [id_base, id_linkage_a, id_linkage_b]:
+            self.packet_handler.write1ByteTxRx(self.port_handler, id, toggle_torque, 1) 
+        set_position = 116
+        self.packet_handler.write4ByteTxRx(
+                self.port_handler, 
+                id_base, 
+                set_position,
+                data['base'] + self.get_parameter('base').get_parameter_value().integer_value
+        )
+        self.packet_handler.write4ByteTxRx(
+                self.port_handler, 
+                id_linkage_a, 
+                set_position,
+                data['a'] + self.get_parameter('a').get_parameter_value().integer_value
+        )
+        self.packet_handler.write4ByteTxRx(
+                self.port_handler, 
+                id_linkage_b, 
+                set_position,
+                data['b'] + self.get_parameter('b').get_parameter_value().integer_value
+        )
+        for id in [id_base, id_linkage_a, id_linkage_b]:
+            self.packet_handler.write1ByteTxRx(self.port_handler, id, toggle_torque, 0) 
+
+        
 
 def main(args=None):
     rclpy.init(args=args)

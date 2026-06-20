@@ -10,6 +10,7 @@ def overflow_add(a,b):
     return int(np.array(a,dtype=np.int32) + np.array(b,dtype=np.int32))
 import argparse
 import dynamixel_sdk
+import json
 import std_msgs.msg as msg
 id_base = 5
 id_linkage_a = 6 
@@ -61,6 +62,7 @@ class ArmSubscriber(Node):
             self.reset,
             1
         )
+        self.reposition = self.create_publisher(String, dir + 'reposition', 1)
 
         self.front_left = Dynamixel("front_left", FRONT_LEFT_ADDR, self.dyna_controller, "wheel")
         self.back_left = Dynamixel("back_left", BACK_LEFT_ADDR, self.dyna_controller, "wheel")
@@ -103,9 +105,13 @@ class ArmSubscriber(Node):
         self.publish_err_linkage_b.publish(message)
     def reset(self, payload):
         toggle_torque = 64
-        self.base.reboot()
-        self.linkage_a.reboot()
-        self.linkage_b.reboot()
+        message = msg.String()
+        message.data = json.dumps({
+            'base': self.base.reboot(),
+            'a': self.linkage_a.reboot(),
+            'b': self.linkage_b.reboot(),
+        })
+        self.reposition.publish(message)
     def drive_direction(self, direction_msg):
         direction = direction_msg.data
 
@@ -205,6 +211,10 @@ class DynamixelController:
         self.packet_handler.write1ByteTxRx(self.port_handler, addr, 11, 1)
     def set_mode_position(self, addr: int):
         self.packet_handler.write1ByteTxRx(self.port_handler, addr, 11, 4)
+    def read_position(self, addr: int):
+        pos = self.packet_handler.read4ByteTxRx(self.port_handler, addr, 132)[0] # turn motors on
+        if (pos > 2 ** 31): pos -= 2 ** 32
+        return pos
     # returns true on error
     def set_speed(self, addr: int, speed: float):
         return self.packet_handler.write4ByteTxRx(self.port_handler, addr, 104, int(speed * 265))[1] != 0
@@ -213,7 +223,10 @@ class DynamixelController:
         return self.packet_handler.write4ByteTxRx(self.port_handler, addr, 116, goal_position)[1] != 0
     def reboot(self,addr: int):
         self.packet_handler.reboot(self.port_handler, addr)
+        while self.toggle_torque(addr, 0) != 0: time.sleep(0.01)
+        pos = self.read_position(addr)
         while self.toggle_torque(addr, 1) != 0: time.sleep(0.01)
+        return pos
 class Dynamixel:
     def __init__(self, name: str, motor_addr: int, controller: DynamixelController, ty: str):
         self.controller = controller
@@ -235,4 +248,4 @@ class Dynamixel:
     def set_position(self, position: int):
         return self.controller.set_position(self.motor_addr, position)
     def reboot(self):
-        self.controller.reboot(self.motor_addr)
+        return self.controller.reboot(self.motor_addr)
