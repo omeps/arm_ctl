@@ -1,4 +1,5 @@
 import rclpy
+import time
 import argparse
 import numpy as np
 import json
@@ -79,6 +80,7 @@ class ArmModelPublisher(Node):
                 set_position,
                 data['b'] + self.get_parameter('b').get_parameter_value().integer_value
         )
+        time.sleep(3.0)
         for id in [id_base, id_linkage_a, id_linkage_b]:
             self.packet_handler.write1ByteTxRx(self.port_handler, id, toggle_torque, 0) 
 
