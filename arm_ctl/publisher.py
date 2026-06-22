@@ -57,7 +57,6 @@ class ArmModelPublisher(Node):
         payload.data = orientation_linkage_b - self.get_parameter('b').get_parameter_value().integer_value
         self.publish_orientation_linkage_b.publish(payload)
     def reposition(self, payload):
-        return #TODO fix
         data = json.loads(payload.data)
 
         present_position = 132
@@ -84,7 +83,7 @@ class ArmModelPublisher(Node):
                 self.port_handler, 
                 id_linkage_a, 
                 set_position,
-                (goal_a - orientation_a + 2048) % 4096 - 2048 + orientation_a,
+                (goal_a - orientation_linkage_a + 2048) % 4096 - 2048 + orientation_linkage_a,
                 
         )
         goal_b = data['b'] + self.get_parameter('b').get_parameter_value().integer_value
@@ -92,7 +91,7 @@ class ArmModelPublisher(Node):
                 self.port_handler, 
                 id_linkage_b, 
                 set_position,
-                (goal_b - orientation_b + 2048) % 4096 - 2048 + orientation_b,
+                (goal_b - orientation_linkage_b + 2048) % 4096 - 2048 + orientation_linkage_b,
         )
         time.sleep(3.0)
         for id in [id_base, id_linkage_a, id_linkage_b]:
