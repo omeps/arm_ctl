@@ -214,6 +214,7 @@ class DynamixelController:
     def read_position(self, addr: int):
         pos = self.packet_handler.read4ByteTxRx(self.port_handler, addr, 132)[0] # turn motors on
         if (pos > 2 ** 31): pos -= 2 ** 32
+        pos = pos % 4096;
         return pos
     # returns true on error
     def set_speed(self, addr: int, speed: float):
@@ -225,6 +226,7 @@ class DynamixelController:
         self.packet_handler.reboot(self.port_handler, addr)
         while self.toggle_torque(addr, 0) != 0: time.sleep(0.01)
         pos = self.read_position(addr)
+        self.last_position=self.controller.read_position(self.motor_addr)
         while self.toggle_torque(addr, 1) != 0: time.sleep(0.01)
         return pos
 class Dynamixel:
@@ -237,6 +239,7 @@ class Dynamixel:
             self.controller.set_mode_run(self.motor_addr)
         elif ty == "arm":
             self.controller.set_mode_position(self.motor_addr)
+            self.last_position=self.controller.read_position(self.motor_addr)
         else:
             raise ValueError("ty must be \"arm\" or \"wheel\"")
         self.controller.toggle_torque(self.motor_addr, 1)
@@ -246,6 +249,8 @@ class Dynamixel:
         return self.controller.set_speed(self.motor_addr, speed)
     # returns true on error
     def set_position(self, position: int):
-        return self.controller.set_position(self.motor_addr, position)
+        bounded_position = (position - self.last_position + 2048) % 4096 + self.last_position - 2048
+        self.last_position = bounded_position
+        return self.controller.set_position(self.motor_addr, bounded_position)
     def reboot(self):
         return self.controller.reboot(self.motor_addr)

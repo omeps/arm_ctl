@@ -9,10 +9,12 @@ port_handler.setBaudRate(1000000)
 packet_handler = dynamixel_sdk.PacketHandler(2.0)
 present_position = 132
 def get_position(mid: int) -> int:
+    position = 0
     while input() != '':
         position = packet_handler.read4ByteTxRx(port_handler, mid, present_position)[0]
+        if (position > 2 ** 31): position -= 2 ** 32
         print(position, end='\r')
-    return packet_handler.read4ByteTxRx(port_handler, mid, present_position)[0]
+    return position
 positions = {}
 for (link,mid) in [('base', 5), ('a', 6), ('b', 7)]:
     print(f'determining link {link} ... ')

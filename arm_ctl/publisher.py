@@ -57,28 +57,42 @@ class ArmModelPublisher(Node):
         payload.data = orientation_linkage_b - self.get_parameter('b').get_parameter_value().integer_value
         self.publish_orientation_linkage_b.publish(payload)
     def reposition(self, payload):
+        return #TODO fix
         data = json.loads(payload.data)
+
+        present_position = 132
+        orientation_base = self.packet_handler.read4ByteTxRx(self.port_handler, id_base, present_position)[0]
+        if (orientation_base > 2 ** 31): orientation_base -= 2 ** 32
+        orientation_linkage_a = self.packet_handler.read4ByteTxRx(self.port_handler, id_linkage_a, present_position)[0]
+        if (orientation_linkage_a > 2 ** 31): orientation_linkage_a -= 2 ** 32
+        orientation_linkage_b = self.packet_handler.read4ByteTxRx(self.port_handler, id_linkage_b, present_position)[0]
+        if (orientation_linkage_b > 2 ** 31): orientation_linkage_b -= 2 ** 32
+
         toggle_torque = 64
         for id in [id_base, id_linkage_a, id_linkage_b]:
             self.packet_handler.write1ByteTxRx(self.port_handler, id, toggle_torque, 1) 
         set_position = 116
+        goal_base = - data['base'] + self.get_parameter('base').get_parameter_value().integer_value
         self.packet_handler.write4ByteTxRx(
                 self.port_handler, 
                 id_base, 
                 set_position,
-                data['base'] + self.get_parameter('base').get_parameter_value().integer_value
+                (goal_base - orientation_base + 2048) % 4096 - 2048 + orientation_base,
         )
+        goal_a = -data['a'] + self.get_parameter('a').get_parameter_value().integer_value
         self.packet_handler.write4ByteTxRx(
                 self.port_handler, 
                 id_linkage_a, 
                 set_position,
-                data['a'] + self.get_parameter('a').get_parameter_value().integer_value
+                (goal_a - orientation_a + 2048) % 4096 - 2048 + orientation_a,
+                
         )
+        goal_b = data['b'] + self.get_parameter('b').get_parameter_value().integer_value
         self.packet_handler.write4ByteTxRx(
                 self.port_handler, 
                 id_linkage_b, 
                 set_position,
-                data['b'] + self.get_parameter('b').get_parameter_value().integer_value
+                (goal_b - orientation_b + 2048) % 4096 - 2048 + orientation_b,
         )
         time.sleep(3.0)
         for id in [id_base, id_linkage_a, id_linkage_b]:
