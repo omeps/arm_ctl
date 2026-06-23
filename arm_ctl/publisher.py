@@ -71,14 +71,14 @@ class ArmModelPublisher(Node):
         for id in [id_base, id_linkage_a, id_linkage_b]:
             self.packet_handler.write1ByteTxRx(self.port_handler, id, toggle_torque, 1) 
         set_position = 116
-        goal_base = - data['base'] + self.get_parameter('base').get_parameter_value().integer_value
+        goal_base = data['base'] + self.get_parameter('base').get_parameter_value().integer_value
         self.packet_handler.write4ByteTxRx(
                 self.port_handler, 
                 id_base, 
                 set_position,
                 (goal_base - orientation_base + 2048) % 4096 - 2048 + orientation_base,
         )
-        goal_a = -data['a'] + self.get_parameter('a').get_parameter_value().integer_value
+        goal_a = data['a'] + self.get_parameter('a').get_parameter_value().integer_value
         self.packet_handler.write4ByteTxRx(
                 self.port_handler, 
                 id_linkage_a, 
