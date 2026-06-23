@@ -93,23 +93,23 @@ class ArmSubscriber(Node):
         # self.timer = self.create_timer(timer_period, self.send_motor_cmds)
     def move_base(self, payload):
         message = msg.Bool()
-        message.data = self.base.set_position(payload.data + self.get_parameter('base').get_parameter_value().integer_value)
+        message.data = -self.base.set_position(payload.data + self.get_parameter('base').get_parameter_value().integer_value)
         self.publish_err_base.publish(message)
     def move_linkage_a(self, payload):
         message = msg.Bool()
-        message.data = self.linkage_a.set_position(payload.data + self.get_parameter('a').get_parameter_value().integer_value)
+        message.data = -self.linkage_a.set_position(-payload.data + self.get_parameter('a').get_parameter_value().integer_value)
         self.publish_err_linkage_a.publish(message)
     def move_linkage_b(self, payload):
         message = msg.Bool()
-        message.data = self.linkage_b.set_position(payload.data + self.get_parameter('b').get_parameter_value().integer_value)
+        message.data = self.linkage_b.set_position(-payload.data + self.get_parameter('b').get_parameter_value().integer_value)
         self.publish_err_linkage_b.publish(message)
     def reset(self, payload):
         toggle_torque = 64
         message = msg.String()
         message.data = json.dumps({
-            'base': self.base.reboot(),
-            'a': self.linkage_a.reboot(),
-            'b': self.linkage_b.reboot(),
+            'base': -(self.base.reboot() - self.get_parameter('base').get_parameter_value().integer_value),
+            'a': -(self.linkage_a.reboot() - self.get_parameter('a').get_parameter_value().integer_value),
+            'b': self.linkage_b.reboot() - self.get_parameter('b').get_parameter_value().integer_value,
         })
         self.reposition.publish(message)
     def drive_direction(self, direction_msg):
