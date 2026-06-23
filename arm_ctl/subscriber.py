@@ -31,7 +31,7 @@ class ArmSubscriber(Node):
         self.declare_parameter('a', 0)
         self.declare_parameter('b', 0)
         self.declare_parameter('base', 0)
-        self.dyna_controller = DynamixelController("/dev/serial/by-id/usb-FTDI_USB__-__Serial_Converter_FT3WHPY9-if00-port0")
+        self.dyna_controller = DynamixelController("/dev/serial/by-id/usb-FTDI_USB__-__Serial_Converter_FT4TFUT7-if00-port0")
         self.base = Dynamixel("base", id_base, self.dyna_controller, "arm")
         self.linkage_a = Dynamixel("linkage_a", id_linkage_a, self.dyna_controller, "arm")
         self.linkage_b = Dynamixel("linkage_b", id_linkage_b, self.dyna_controller, "arm")
@@ -93,11 +93,11 @@ class ArmSubscriber(Node):
         # self.timer = self.create_timer(timer_period, self.send_motor_cmds)
     def move_base(self, payload):
         message = msg.Bool()
-        message.data = -self.base.set_position(payload.data + self.get_parameter('base').get_parameter_value().integer_value)
+        message.data = self.base.set_position(-payload.data + self.get_parameter('base').get_parameter_value().integer_value)
         self.publish_err_base.publish(message)
     def move_linkage_a(self, payload):
         message = msg.Bool()
-        message.data = -self.linkage_a.set_position(-payload.data + self.get_parameter('a').get_parameter_value().integer_value)
+        message.data = self.linkage_a.set_position(payload.data + self.get_parameter('a').get_parameter_value().integer_value)
         self.publish_err_linkage_a.publish(message)
     def move_linkage_b(self, payload):
         message = msg.Bool()
@@ -108,8 +108,8 @@ class ArmSubscriber(Node):
         message = msg.String()
         message.data = json.dumps({
             'base': -(self.base.reboot() - self.get_parameter('base').get_parameter_value().integer_value),
-            'a': -(self.linkage_a.reboot() - self.get_parameter('a').get_parameter_value().integer_value),
-            'b': self.linkage_b.reboot() - self.get_parameter('b').get_parameter_value().integer_value,
+            'a': (self.linkage_a.reboot() - self.get_parameter('a').get_parameter_value().integer_value),
+            'b': -(self.linkage_b.reboot() - self.get_parameter('b').get_parameter_value().integer_value),
         })
         self.reposition.publish(message)
     def drive_direction(self, direction_msg):
@@ -226,7 +226,7 @@ class DynamixelController:
         self.packet_handler.reboot(self.port_handler, addr)
         while self.toggle_torque(addr, 0) != 0: time.sleep(0.01)
         pos = self.read_position(addr)
-        self.last_position=self.controller.read_position(self.motor_addr)
+        self.last_position=self.read_position(addr)
         while self.toggle_torque(addr, 1) != 0: time.sleep(0.01)
         return pos
 class Dynamixel:
