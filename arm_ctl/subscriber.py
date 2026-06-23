@@ -15,6 +15,7 @@ import std_msgs.msg as msg
 id_base = 5
 id_linkage_a = 6 
 id_linkage_b = 7
+id_claw = 8
 FRONT_LEFT_ADDR = 0
 BACK_LEFT_ADDR = 2
 FRONT_RIGHT_ADDR = 1
@@ -31,8 +32,10 @@ class ArmSubscriber(Node):
         self.declare_parameter('a', 0)
         self.declare_parameter('b', 0)
         self.declare_parameter('base', 0)
+        self.declare_parameter('claw', 0)
         self.dyna_controller = DynamixelController("/dev/serial/by-id/usb-FTDI_USB__-__Serial_Converter_FT4TFUT7-if00-port0")
         self.base = Dynamixel("base", id_base, self.dyna_controller, "arm")
+        self.claw = Dynamixel("claw", id_claw, self.dyna_controller, "arm")
         self.linkage_a = Dynamixel("linkage_a", id_linkage_a, self.dyna_controller, "arm")
         self.linkage_b = Dynamixel("linkage_b", id_linkage_b, self.dyna_controller, "arm")
         self.subscription_base = self.create_subscription(
@@ -60,6 +63,12 @@ class ArmSubscriber(Node):
             msg.Empty,
             dir + 'reset',
             self.reset,
+            1
+        )
+        self.subscription_claw = self.create_subscription(
+            msg.Int32,
+            dir + 'claw',
+            self.move_claw,
             1
         )
         self.reposition = self.create_publisher(String, dir + 'reposition', 1)
@@ -95,6 +104,10 @@ class ArmSubscriber(Node):
         message = msg.Bool()
         message.data = self.base.set_position(-payload.data + self.get_parameter('base').get_parameter_value().integer_value)
         self.publish_err_base.publish(message)
+    def move_claw(self, payload):
+        message = msg.Bool()
+        message.data = self.claw.set_position(payload.data + self.get_parameter('claw').get_parameter_value().integer_value)
+        self.publish_err_claw.publish(message)
     def move_linkage_a(self, payload):
         message = msg.Bool()
         message.data = self.linkage_a.set_position(payload.data + self.get_parameter('a').get_parameter_value().integer_value)
@@ -108,6 +121,7 @@ class ArmSubscriber(Node):
         message = msg.String()
         message.data = json.dumps({
             'base': -(self.base.reboot() - self.get_parameter('base').get_parameter_value().integer_value),
+            'claw': (self.claw.reboot() - self.get_parameter('claw').get_parameter_value().integer_value),
             'a': (self.linkage_a.reboot() - self.get_parameter('a').get_parameter_value().integer_value),
             'b': -(self.linkage_b.reboot() - self.get_parameter('b').get_parameter_value().integer_value),
         })

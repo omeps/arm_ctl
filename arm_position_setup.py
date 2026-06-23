@@ -16,7 +16,7 @@ def get_position(mid: int) -> int:
         print(position, end='\r')
     return position
 positions = {}
-for (link,mid) in [('base', 5), ('a', 6), ('b', 7)]:
+for (link,mid) in [('base', 5), ('a', 6), ('b', 7), ('claw', 8)]:
     print(f'determining link {link} ... ')
     positions[link] = get_position(mid)
 with open('launch/subscriber.py','w') as conf:
@@ -37,6 +37,7 @@ def generate_launch_description():
                 {{'a': {positions['a']}}},
                 {{'b': {positions['b']}}},
                 {{'base': {positions['base']}}},
+                {{'claw': {positions['claw']}}},
             ]
         )
     ])
@@ -58,7 +59,7 @@ def generate_launch_description():
             parameters=[
                 {{'a': {positions['a']}}},
                 {{'b': {positions['b']}}},
-                {{'base': {positions['base']}}},
+                {{'claw': {positions['claw']}}},
             ]
         )
     ])
