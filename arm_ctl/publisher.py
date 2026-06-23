@@ -40,7 +40,7 @@ class ArmModelPublisher(Node):
         self.port_handler.setBaudRate(1000000)
 
         toggle_torque = 64
-        for id in [id_base, id_linkage_a, id_linkage_b,claw]:
+        for id in [id_base, id_linkage_a, id_linkage_b,id_claw]:
             self.packet_handler.write1ByteTxRx(self.port_handler, id, toggle_torque, 0) # turn motors off so they can be moved
 
     def publish_motor_data(self):
