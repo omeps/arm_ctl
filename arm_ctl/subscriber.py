@@ -71,6 +71,7 @@ class ArmSubscriber(Node):
             self.move_claw,
             1
         )
+        self.publish_err_claw = self.create_publisher(msg.Bool, dir + "err/claw", 1)
         self.reposition = self.create_publisher(String, dir + 'reposition', 1)
 
         self.front_left = Dynamixel("front_left", FRONT_LEFT_ADDR, self.dyna_controller, "wheel")
