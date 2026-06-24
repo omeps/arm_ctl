@@ -239,10 +239,9 @@ class DynamixelController:
         return self.packet_handler.write4ByteTxRx(self.port_handler, addr, 116, goal_position)[1] != 0
     def reboot(self,addr: int):
         self.packet_handler.reboot(self.port_handler, addr)
-        while self.toggle_torque(addr, 0) != 0: time.sleep(0.01)
+        while self.toggle_torque(addr, 1) != 0: time.sleep(0.01)
         pos = self.read_position(addr)
         self.last_position=self.read_position(addr)
-        while self.toggle_torque(addr, 1) != 0: time.sleep(0.01)
         return pos
 class Dynamixel:
     def __init__(self, name: str, motor_addr: int, controller: DynamixelController, ty: str):
