@@ -32,6 +32,12 @@ class ArmModelPublisher(Node):
                 self.reposition,
                 1,
         )
+        self.subscription_reset = self.create_subscription(
+                msg.Empty,
+                dir + 'reset',
+                self.reset,
+                1,
+        )
         self.timer = self.create_timer(timer_period, self.publish_motor_data)
 
         self.port_handler = dynamixel_sdk.PortHandler(device_name)
@@ -112,6 +118,9 @@ class ArmModelPublisher(Node):
         time.sleep(3.0)
         for id in [id_base, id_linkage_a, id_linkage_b, id_claw]:
             self.packet_handler.write1ByteTxRx(self.port_handler, id, toggle_torque, 0) 
+        self.timer.reset()
+    def reset(self,payload):
+        self.timer.cancel()
 
         
 

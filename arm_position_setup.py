@@ -60,6 +60,7 @@ def generate_launch_description():
                 {{'a': {positions['a']}}},
                 {{'b': {positions['b']}}},
                 {{'claw': {positions['claw']}}},
+                {{'base': {positions['base']}}},
             ]
         )
     ])
