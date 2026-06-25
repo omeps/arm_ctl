@@ -138,10 +138,11 @@ class ArmSubscriber(Node):
             'b': -(self.linkage_b.reboot() - self.get_parameter('b').get_parameter_value().integer_value),
         })
         self.reposition.publish(message)
-        self.create_timer(3.0, self.accept_again, oneshot=True)
+        self.accept_timer = self.create_timer(3.0, self.accept_again)
     def accept_again(self):
         print('accept_again')
         self.accept_messages = True
+        self.accept_timer.cancel()
     def drive_direction(self, direction_msg):
         direction = direction_msg.data
 
