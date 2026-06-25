@@ -25,6 +25,7 @@ BROAD_PERCENT = .2
 
 TIGHT_PERCENT = .6
 
+accept_messages = True
 class ArmSubscriber(Node):
     # MAKE SURE `dir' ends with a / to keep topics in 1 directory
     def __init__(self, dir="arm_ctl/", device_name='/dev/ttyUSB0'):
@@ -127,6 +128,10 @@ class ArmSubscriber(Node):
             'b': -(self.linkage_b.reboot() - self.get_parameter('b').get_parameter_value().integer_value),
         })
         self.reposition.publish(message)
+        accept_messages = False
+        self.create_timer(3.0, self.accept_again)
+    def accept_again():
+        accept_messages = True
     def drive_direction(self, direction_msg):
         direction = direction_msg.data
 
