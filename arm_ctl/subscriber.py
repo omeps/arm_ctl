@@ -241,7 +241,6 @@ class DynamixelController:
         self.packet_handler.reboot(self.port_handler, addr)
         while self.toggle_torque(addr, 1) != 0: time.sleep(0.01)
         pos = self.read_position(addr)
-        self.last_position=self.read_position(addr)
         return pos
 class Dynamixel:
     def __init__(self, name: str, motor_addr: int, controller: DynamixelController, ty: str):
@@ -267,4 +266,5 @@ class Dynamixel:
         self.last_position = bounded_position
         return self.controller.set_position(self.motor_addr, bounded_position)
     def reboot(self):
-        return self.controller.reboot(self.motor_addr)
+        self.last_position = self.controller.reboot(self.motor_addr)
+        return self.last_position
