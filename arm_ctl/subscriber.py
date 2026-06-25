@@ -25,7 +25,6 @@ BROAD_PERCENT = .2
 
 TIGHT_PERCENT = .6
 
-accept_messages = True
 class ArmSubscriber(Node):
     # MAKE SURE `dir' ends with a / to keep topics in 1 directory
     def __init__(self, dir="arm_ctl/", device_name='/dev/ttyUSB0'):
@@ -39,6 +38,7 @@ class ArmSubscriber(Node):
         self.claw = Dynamixel("claw", id_claw, self.dyna_controller, "arm")
         self.linkage_a = Dynamixel("linkage_a", id_linkage_a, self.dyna_controller, "arm")
         self.linkage_b = Dynamixel("linkage_b", id_linkage_b, self.dyna_controller, "arm")
+        self.accept_messages = True
         self.subscription_base = self.create_subscription(
             msg.Int32,
             dir + 'base',
@@ -103,22 +103,32 @@ class ArmSubscriber(Node):
         # timer_period = 1/30
         # self.timer = self.create_timer(timer_period, self.send_motor_cmds)
     def move_base(self, payload):
+        if not self.accept_messages: return
+        print('move_base')
         message = msg.Bool()
         message.data = self.base.set_position(-payload.data + self.get_parameter('base').get_parameter_value().integer_value)
         self.publish_err_base.publish(message)
     def move_claw(self, payload):
+        if not self.accept_messages: return
+        print('move_claw')
         message = msg.Bool()
         message.data = self.claw.set_position(payload.data + self.get_parameter('claw').get_parameter_value().integer_value)
         self.publish_err_claw.publish(message)
     def move_linkage_a(self, payload):
+        if not self.accept_messages: return
+        print('move_linkage_a')
         message = msg.Bool()
         message.data = self.linkage_a.set_position(payload.data + self.get_parameter('a').get_parameter_value().integer_value)
         self.publish_err_linkage_a.publish(message)
     def move_linkage_b(self, payload):
+        if not self.accept_messages: return
+        print('move_linkage_b')
         message = msg.Bool()
         message.data = self.linkage_b.set_position(-payload.data + self.get_parameter('b').get_parameter_value().integer_value)
         self.publish_err_linkage_b.publish(message)
     def reset(self, payload):
+        print('reset')
+        self.accept_messages = False
         toggle_torque = 64
         message = msg.String()
         message.data = json.dumps({
@@ -128,10 +138,10 @@ class ArmSubscriber(Node):
             'b': -(self.linkage_b.reboot() - self.get_parameter('b').get_parameter_value().integer_value),
         })
         self.reposition.publish(message)
-        accept_messages = False
-        self.create_timer(3.0, self.accept_again)
-    def accept_again():
-        accept_messages = True
+        self.create_timer(3.0, self.accept_again, oneshot=True)
+    def accept_again(self):
+        print('accept_again')
+        self.accept_messages = True
     def drive_direction(self, direction_msg):
         direction = direction_msg.data
 
