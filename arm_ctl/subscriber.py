@@ -137,6 +137,7 @@ class ArmSubscriber(Node):
             'a': (self.linkage_a.reboot() - self.get_parameter('a').get_parameter_value().integer_value),
             'b': -(self.linkage_b.reboot() - self.get_parameter('b').get_parameter_value().integer_value),
         })
+        for i in [0,1,2,3]: self.dyna_controller.reboot(i)
         self.reposition.publish(message)
         self.create_timer(3.0, self.accept_again, oneshot=True)
     def accept_again(self):

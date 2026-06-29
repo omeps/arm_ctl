@@ -32,6 +32,13 @@ class ArmModelPublisher(Node):
                 self.reposition,
                 1,
         )
+        self.publishing = True
+        self.subscription_toggle = self.create_subscription(
+                msg.Bool,
+                dir + 'publish',
+                self.toggle,
+                1,
+        )
         self.timer = self.create_timer(timer_period, self.publish_motor_data)
 
         self.port_handler = dynamixel_sdk.PortHandler(device_name)
@@ -44,6 +51,7 @@ class ArmModelPublisher(Node):
             self.packet_handler.write1ByteTxRx(self.port_handler, id, toggle_torque, 0) # turn motors off so they can be moved
 
     def publish_motor_data(self):
+        if !publishing: return
         global id_base,id_linkage_a, id_linkage_b, id_claw
         present_position = 132
         orientation_base = self.packet_handler.read4ByteTxRx(self.port_handler, id_base, present_position)[0]
@@ -112,6 +120,8 @@ class ArmModelPublisher(Node):
         time.sleep(3.0)
         for id in [id_base, id_linkage_a, id_linkage_b, id_claw]:
             self.packet_handler.write1ByteTxRx(self.port_handler, id, toggle_torque, 0) 
+    def toggle(self,payload):
+        self.publishing = payload.data;
 
         
 
