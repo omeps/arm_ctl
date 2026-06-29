@@ -112,7 +112,7 @@ class ArmSubscriber(Node):
         if not self.accept_messages: return
         print('move_claw')
         message = msg.Bool()
-        message.data = self.claw.set_position(payload.data + self.get_parameter('claw').get_parameter_value().integer_value)
+        message.data = self.claw.set_position(-payload.data + self.get_parameter('claw').get_parameter_value().integer_value)
         self.publish_err_claw.publish(message)
     def move_linkage_a(self, payload):
         if not self.accept_messages: return
@@ -133,7 +133,7 @@ class ArmSubscriber(Node):
         message = msg.String()
         message.data = json.dumps({
             'base': -(self.base.reboot() - self.get_parameter('base').get_parameter_value().integer_value),
-            'claw': (self.claw.reboot() - self.get_parameter('claw').get_parameter_value().integer_value),
+            'claw': -(self.claw.reboot() - self.get_parameter('claw').get_parameter_value().integer_value),
             'a': (self.linkage_a.reboot() - self.get_parameter('a').get_parameter_value().integer_value),
             'b': -(self.linkage_b.reboot() - self.get_parameter('b').get_parameter_value().integer_value),
         })
