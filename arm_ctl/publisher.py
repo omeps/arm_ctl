@@ -51,7 +51,7 @@ class ArmModelPublisher(Node):
             self.packet_handler.write1ByteTxRx(self.port_handler, id, toggle_torque, 0) # turn motors off so they can be moved
 
     def publish_motor_data(self):
-        if !publishing: return
+        if not publishing: return
         global id_base,id_linkage_a, id_linkage_b, id_claw
         present_position = 132
         orientation_base = self.packet_handler.read4ByteTxRx(self.port_handler, id_base, present_position)[0]
