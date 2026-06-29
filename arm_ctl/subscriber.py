@@ -139,10 +139,11 @@ class ArmSubscriber(Node):
         })
         for i in [0,1,2,3]: self.dyna_controller.reboot(i)
         self.reposition.publish(message)
-        self.create_timer(3.0, self.accept_again, oneshot=True)
+        self.accept_timer = self.create_timer(3.0, self.accept_again)
     def accept_again(self):
         print('accept_again')
         self.accept_messages = True
+        self.accept_timer.cancel()
     def drive_direction(self, direction_msg):
         direction = direction_msg.data
 
